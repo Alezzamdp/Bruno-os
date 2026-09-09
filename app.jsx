@@ -395,8 +395,29 @@ function AreaPill({ area }) {
 // ---------- APP ----------
 function BrunoOS() {
   useSystemStyles();
-  const [items, setItems] = useState(seedItems);
-  const [proyectos, setProyectos] = useState(seedProyectos);
+  const [items, setItems] = useState(() => {
+    try {
+      const raw = localStorage.getItem("brunoos_items");
+      return raw ? JSON.parse(raw) : seedItems;
+    } catch (e) {
+      return seedItems;
+    }
+  });
+  const [proyectos, setProyectos] = useState(() => {
+    try {
+      const raw = localStorage.getItem("brunoos_proyectos");
+      return raw ? JSON.parse(raw) : seedProyectos;
+    } catch (e) {
+      return seedProyectos;
+    }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("brunoos_items", JSON.stringify(items)); } catch (e) {}
+  }, [items]);
+  useEffect(() => {
+    try { localStorage.setItem("brunoos_proyectos", JSON.stringify(proyectos)); } catch (e) {}
+  }, [proyectos]);
   const [tab, setTab] = useState("inicio");
   const [registrarOpen, setRegistrarOpen] = useState(false);
   const [editando, setEditando] = useState(null);
