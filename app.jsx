@@ -52,6 +52,25 @@ function useSystemStyles() {
       input, select, textarea {
         font: inherit;
       }
+      .bruno-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse 900px 600px at 20% -10%, rgba(90,80,60,0.16), transparent 60%),
+          radial-gradient(ellipse 700px 500px at 100% 0%, rgba(50,60,90,0.14), transparent 55%),
+          radial-gradient(ellipse 800px 800px at 50% 120%, rgba(70,50,80,0.10), transparent 60%),
+          #050505;
+      }
+      .bruno-bg::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.05;
+        mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
     `;
     document.head.appendChild(style);
   }, []);
@@ -183,7 +202,7 @@ function detectArea(lower) {
 // ---------- UI PRIMITIVES ----------
 const COLOR = {
   bg: "#050505",
-  bgRaised: "#161614",
+  bgRaised: "rgba(255,255,255,0.045)",
   ink: "#ffffff",
   inkDim: "#9a9a95",
   inkFaint: "#5c5b56",
@@ -196,12 +215,13 @@ const styles = {
     maxWidth: 420,
     margin: "0 auto",
     minHeight: "100vh",
-    background: COLOR.bg,
+    background: "transparent",
     color: COLOR.ink,
     fontFamily: FONT_BODY,
     display: "flex",
     flexDirection: "column",
     position: "relative",
+    zIndex: 1,
   },
   main: { flex: 1, overflowY: "auto", padding: "20px 18px 100px" },
   nav: {
@@ -249,6 +269,8 @@ const styles = {
     borderRadius: 14,
     padding: "14px 16px",
     marginBottom: 10,
+    backdropFilter: "blur(24px)",
+    WebkitBackdropFilter: "blur(24px)",
   },
   sectionTitle: {
     fontSize: 12,
@@ -268,6 +290,8 @@ const styles = {
     borderRadius: 14,
     overflow: "hidden",
     marginBottom: 10,
+    backdropFilter: "blur(24px)",
+    WebkitBackdropFilter: "blur(24px)",
   },
   groupRow: {
     display: "flex",
@@ -422,6 +446,7 @@ function BrunoOS() {
   const [registrarOpen, setRegistrarOpen] = useState(false);
   const [editando, setEditando] = useState(null);
   const [filtroAreaTareas, setFiltroAreaTareas] = useState(null);
+  const [quickMovimientoOpen, setQuickMovimientoOpen] = useState(false);
 
   const tareasPendientes = items.filter((i) => i.tipo === "tarea" && i.estado === "pendiente");
   const eventosHoy = items.filter((i) => i.tipo === "evento" && i.fecha === todayISO()).sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
@@ -452,6 +477,7 @@ function BrunoOS() {
 
   return (
     <div style={styles.app}>
+      <div className="bruno-bg" />
       <div style={styles.main}>
         {tab === "inicio" && (
           <InicioView
@@ -466,6 +492,7 @@ function BrunoOS() {
             setTab={setTab}
             onEditItem={setEditando}
             onFiltrarArea={(a) => { setFiltroAreaTareas(a); setTab("tareas"); }}
+            onQuickMovimiento={() => setQuickMovimientoOpen(true)}
           />
         )}
         {tab === "agenda" && <AgendaView items={items} onEditItem={setEditando} />}
@@ -502,6 +529,13 @@ function BrunoOS() {
           onDelete={() => { deleteItem(editando.id); setEditando(null); }}
         />
       )}
+
+      {quickMovimientoOpen && (
+        <QuickMovimientoSheet
+          onClose={() => setQuickMovimientoOpen(false)}
+          onSave={(mov) => { addItem(mov); setQuickMovimientoOpen(false); }}
+        />
+      )}
     </div>
   );
 }
@@ -516,7 +550,7 @@ function NavItem({ label, icon, active, onClick }) {
 }
 
 // ---------- INICIO ----------
-function InicioView({ eventosHoy, prioridades, tareasPendientes, agendaSemana, saldos, items, onOpenRegistrar, onToggleTarea, setTab, onEditItem, onFiltrarArea }) {
+function InicioView({ eventosHoy, prioridades, tareasPendientes, agendaSemana, saldos, items, onOpenRegistrar, onToggleTarea, setTab, onEditItem, onFiltrarArea, onQuickMovimiento }) {
   return (
     <div>
       <p style={styles.sub}>{fmtDate(todayISO())}</p>
@@ -583,6 +617,30 @@ function InicioView({ eventosHoy, prioridades, tareasPendientes, agendaSemana, s
         })}
       </div>
 
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <div style={styles.sectionTitle}>Resumen</div>
+        <button
+          className="bruno-btn"
+          onClick={onQuickMovimiento}
+          style={{
+            width: 26, height: 26, borderRadius: "50%", background: COLOR.ink, color: COLOR.bg,
+            border: "none", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex",
+            alignItems: "center", justifyContent: "center", marginTop: 14,
+          }}
+          aria-label="Agregar gasto o ingreso"
+        >
+          +
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        {CUENTAS.map((c) => (
+          <div key={c} style={{ ...styles.card, flex: 1, marginBottom: 0 }}>
+            <div style={{ fontSize: 12, color: "#9a9a95" }}>Caja {c}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>{fmtMoney(saldos[c] || 0)}</div>
+          </div>
+        ))}
+      </div>
+
       <div style={styles.sectionTitle}>Áreas clave</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {AREAS.filter((a) => a !== "Sistemas" || items.some((i) => i.area === "Sistemas")).slice(0, 4).map((a) => {
@@ -619,19 +677,10 @@ function InicioView({ eventosHoy, prioridades, tareasPendientes, agendaSemana, s
       ))}
       <button style={{ ...styles.btn(false), width: "100%", marginTop: 4 }} onClick={() => setTab("tareas")}>Ver todas</button>
 
-      <div style={styles.sectionTitle}>Resumen</div>
-      <div style={{ display: "flex", gap: 8 }}>
-        {CUENTAS.map((c) => (
-          <div key={c} style={{ ...styles.card, flex: 1, marginBottom: 0 }}>
-            <div style={{ fontSize: 12, color: "#9a9a95" }}>Caja {c}</div>
-            <div style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>{fmtMoney(saldos[c] || 0)}</div>
-          </div>
-        ))}
-      </div>
-
       <div style={styles.sectionTitle}>Capturar algo</div>
-      <button style={{ ...styles.input, textAlign: "left", color: "#5c5b56", cursor: "pointer" }} onClick={onOpenRegistrar}>
-        Escribir una tarea, idea, fecha o gasto…
+      <button style={{ ...styles.input, display: "flex", alignItems: "center", gap: 8, textAlign: "left", color: "#5c5b56", cursor: "pointer" }} onClick={onOpenRegistrar}>
+        <span style={{ flex: 1 }}>Escribir una tarea, idea, fecha o gasto…</span>
+        <span style={{ fontSize: 16, color: COLOR.inkDim, flexShrink: 0 }}>🎙️</span>
       </button>
     </div>
   );
@@ -729,21 +778,41 @@ function TareaRow({ t, onToggle, onDelete, onEdit, done }) {
 // ---------- MAS ----------
 function MasView({ items, proyectos, saldos, onAddMovimiento, onDeleteItem, onEditItem }) {
   const [sub, setSub] = useState("menu");
+  const menuItems = [
+    { label: "Finanzas", key: "finanzas", icon: "$", color: "#3f9e57", desc: "Cajas, gastos e ingresos" },
+    { label: "Proyectos", key: "proyectos", icon: "▣", color: "#3782d4", desc: "Iniciativas en curso" },
+    { label: "Ideas", key: "ideas", icon: "✦", color: "#c98a2e", desc: "Ocurrencias para revisar después" },
+    { label: "Notas", key: "notas", icon: "▤", color: "#8a8a86", desc: "Apuntes sueltos" },
+    { label: "Áreas", key: "areas", icon: "◆", color: "#8064c9", desc: "Vista general por área de vida" },
+  ];
   if (sub === "menu") {
     return (
       <div>
         <h1 style={styles.h1}>Más</h1>
-        {[
-          ["Finanzas", "finanzas"],
-          ["Proyectos", "proyectos"],
-          ["Ideas", "ideas"],
-          ["Notas", "notas"],
-          ["Áreas", "areas"],
-        ].map(([label, key]) => (
-          <button key={key} className="bruno-row" style={{ ...styles.card, width: "100%", textAlign: "left", cursor: "pointer", fontSize: 15, fontWeight: 500 }} onClick={() => setSub(key)}>
-            {label}
-          </button>
-        ))}
+        <div style={{ ...styles.group, marginTop: 8 }}>
+          {menuItems.map((item, idx) => (
+            <button
+              key={item.key}
+              className="bruno-row"
+              style={{
+                ...(idx === menuItems.length - 1 ? styles.groupRowLast : styles.groupRow),
+                width: "100%", background: "none", border: "none", textAlign: "left", cursor: "pointer",
+                borderBottom: idx === menuItems.length - 1 ? "none" : `1px solid ${COLOR.line}`,
+              }}
+              onClick={() => setSub(item.key)}
+            >
+              <span style={{
+                width: 32, height: 32, borderRadius: 9, background: item.color + "26", color: item.color,
+                fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>{item.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 500 }}>{item.label}</div>
+                <div style={{ fontSize: 12, color: COLOR.inkDim, marginTop: 1 }}>{item.desc}</div>
+              </div>
+              <span style={styles.chevron}>›</span>
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
@@ -946,6 +1015,8 @@ function RegistrarModal({ onClose, onSave }) {
   const [texto, setTexto] = useState("");
   const [propuesta, setPropuesta] = useState(null);
   const [modoManual, setModoManual] = useState(false);
+  const [hintDictado, setHintDictado] = useState(false);
+  const textareaRef = React.useRef(null);
 
   function analizar() {
     if (!texto.trim()) return;
@@ -968,13 +1039,34 @@ function RegistrarModal({ onClose, onSave }) {
       primaryLabel="Analizar"
       primaryDisabled={!texto.trim()}
     >
-      <textarea
-        autoFocus
-        style={{ ...styles.input, minHeight: 76, resize: "none" }}
-        placeholder="Mañana llamar a Juan por verificación policial..."
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-      />
+      <div style={{ position: "relative" }}>
+        <textarea
+          ref={textareaRef}
+          autoFocus
+          style={{ ...styles.input, minHeight: 76, paddingRight: 44, resize: "none" }}
+          placeholder="Mañana llamar a Juan por verificación policial..."
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+        />
+        <button
+          type="button"
+          className="bruno-btn"
+          onClick={() => { textareaRef.current?.focus(); setHintDictado(true); }}
+          style={{
+            position: "absolute", right: 8, bottom: 8, width: 32, height: 32, borderRadius: "50%",
+            background: COLOR.lineStrong, border: "none", fontSize: 15, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          aria-label="Dictar por voz"
+        >
+          🎙️
+        </button>
+      </div>
+      {hintDictado && (
+        <p style={{ fontSize: 12, color: COLOR.inkDim, marginTop: 6 }}>
+          Tocá el ícono de micrófono del teclado para dictar — el texto se completa solo.
+        </p>
+      )}
       <button
         className="bruno-btn"
         style={{ ...styles.btn(false), width: "100%", marginTop: 10 }}
@@ -1056,6 +1148,50 @@ function EditarModal({ item, onClose, onSave, onDelete }) {
       >
         Eliminar
       </button>
+    </Sheet>
+  );
+}
+
+function QuickMovimientoSheet({ onClose, onSave }) {
+  const [tipoMov, setTipoMov] = useState("gasto");
+  const [monto, setMonto] = useState("");
+  const [cuenta, setCuenta] = useState("Personal");
+  const [titulo, setTitulo] = useState("");
+
+  function submit() {
+    if (!monto) return;
+    const m = Math.abs(parseInt(monto, 10)) * (tipoMov === "gasto" ? -1 : 1);
+    onSave({
+      tipo: "movimiento",
+      titulo: titulo.trim() || (tipoMov === "gasto" ? "Gasto" : "Ingreso"),
+      monto: m,
+      cuenta,
+      area: cuenta === "Personal" ? "Dinero" : cuenta,
+      fecha: todayISO(),
+    });
+  }
+
+  return (
+    <Sheet title="Gasto o ingreso" onClose={onClose} onPrimary={submit} primaryLabel="Guardar" primaryDisabled={!monto}>
+      <div style={styles.group}>
+        <Field label="Tipo" last={false}>
+          <select style={styles.select} value={tipoMov} onChange={(e) => setTipoMov(e.target.value)}>
+            <option value="gasto">Gasto</option>
+            <option value="ingreso">Ingreso</option>
+          </select>
+        </Field>
+        <Field label="Monto" last={false}>
+          <input autoFocus style={styles.fieldInputNarrow} type="number" placeholder="0" value={monto} onChange={(e) => setMonto(e.target.value)} />
+        </Field>
+        <Field label="Cuenta" last={false}>
+          <select style={styles.select} value={cuenta} onChange={(e) => setCuenta(e.target.value)}>
+            {CUENTAS.map((c) => <option key={c}>{c}</option>)}
+          </select>
+        </Field>
+        <Field label="Descripción" last>
+          <input style={styles.fieldInput} placeholder="Opcional" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+        </Field>
+      </div>
     </Sheet>
   );
 }
