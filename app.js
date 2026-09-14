@@ -220,7 +220,8 @@
   let filtroTareas = 'pendientes';
   let filtroCuenta = null;
   let toastTimer = null;
-  let animar = true; // la aparición escalonada solo al abrir o cambiar de sección
+  let animar = true;
+  let tipoElegido = null; // chip tocado debajo de la caja de Inicio; se limpia al anotar // la aparición escalonada solo al abrir o cambiar de sección
 
   // ---------- Render ----------
   const app = $('#app');
@@ -286,6 +287,7 @@
       '<section class="entrada aparece">' +
         '<div class="caja"><textarea id="entrada" rows="2" placeholder="Anotá lo que aparezca…" enterkeyhint="send"></textarea>' +
         '<div class="acciones"><button type="button" class="btn primario" id="interpretar">Anotar</button></div></div>' +
+        '<div class="chips tipos">' + Object.keys(TIPOS).map((k) => '<button type="button" class="chip' + (tipoElegido === k ? ' on' : '') + '" data-elegir="' + k + '">' + TIPOS[k] + '</button>').join('') + '</div>' +
         '<div class="ayuda">Se guarda solo donde corresponde: <b>agenda</b> si tiene fecha u hora, <b>plata</b> si tiene monto, <b>idea:</b> o <b>nota:</b> por prefijo; si no, <b>tarea</b>. Para dictar, el micrófono del teclado.</div>' +
       '</section>' +
       '<section class="pulso aparece">' +
@@ -449,7 +451,13 @@
     el.className = 'toast';
     el.innerHTML = '<span>' + esc(texto) + '</span>' + (deshacer ? '<button type="button" class="deshacer" data-deshacer>' + (etiqueta || 'Deshacer') + '</button>' : '');
     document.body.appendChild(el);
-    toastTimer = setTimeout(() => el.remove(), deshacer ? 6000 : 2200);
+    toastTimer = setTimeout(() => el.remove(), deshacer ? 4500 : 1800);
+    // Se saca con un toque (fuera del botón) o deslizándolo hacia arriba.
+    let y0 = null;
+    el.addEventListener('click', (e) => { if (!e.target.closest('[data-deshacer]')) el.remove(); });
+    el.addEventListener('touchstart', (e) => { y0 = e.touches[0].clientY; }, { passive: true });
+    el.addEventListener('touchmove', (e) => { if (y0 == null) return; const dy = e.touches[0].clientY - y0; if (dy < 0) el.style.transform = 'translateY(' + dy + 'px)'; if (dy < -30) { el.remove(); y0 = null; } }, { passive: true });
+    el.addEventListener('touchend', () => { el.style.transform = ''; y0 = null; });
   }
   // Anota directo, sin confirmar. Si viene de la caja de una sección, se acomoda a ese tipo.
   function anotarDirecto(texto, tipoForzado) {
@@ -496,9 +504,10 @@
 
   // ---------- Eventos (delegados) ----------
   document.addEventListener('click', (ev) => {
-    const t = ev.target.closest('[data-ir],[data-nuevo],[data-hecha],[data-abrir],[data-cuenta],[data-filtro-tareas],[data-filtro-cuenta],[data-tipo],[data-signo],[data-cerrar],[data-eliminar],[data-deshacer],[data-exportar],[data-borrar-todo],#interpretar');
+    const t = ev.target.closest('[data-ir],[data-nuevo],[data-hecha],[data-abrir],[data-cuenta],[data-filtro-tareas],[data-filtro-cuenta],[data-tipo],[data-signo],[data-cerrar],[data-eliminar],[data-deshacer],[data-exportar],[data-borrar-todo],[data-elegir],#interpretar');
     if (!t) return;
-    if (t.matches('#interpretar')) { const ta = $('#entrada'); const v = ta.value.trim(); if (!v) { ta.focus(); return; } ta.value = ''; anotarDirecto(v, null); return; }
+    if (t.matches('#interpretar')) { const ta = $('#entrada'); const v = ta.value.trim(); if (!v) { ta.focus(); return; } ta.value = ''; const f = tipoElegido; tipoElegido = null; anotarDirecto(v, f); return; }
+    if (t.dataset.elegir) { tipoElegido = tipoElegido === t.dataset.elegir ? null : t.dataset.elegir; $('.chips.tipos').querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.elegir === tipoElegido)); const ta = $('#entrada'); if (ta) ta.focus(); return; }
     if (t.dataset.ir != null) { vista = t.dataset.ir; if (vista === 'buscar') busqueda = ''; animar = true; render(); return; }
     if (t.dataset.nuevo != null) { const tipo = vista === 'agenda' ? 'evento' : vista === 'cuentas' ? 'movimiento' : vista === 'ideas' ? 'idea' : 'tarea'; sheetConfirmar({ tipo, titulo: '', area: 'Personal', fecha: tipo === 'evento' ? hoy() : null, monto: 0, cuenta: 'Personal' }, false); const i = $('input[name=titulo]'); if (i) i.focus(); return; }
     if (t.dataset.hecha) {
