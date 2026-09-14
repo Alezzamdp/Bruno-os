@@ -227,14 +227,19 @@
   const app = $('#app');
   const nav = $('#nav');
 
+  let vistaPintada = null;
   function render() {
     const vistas = { inicio, agenda, tareas, cuentas, ideas, buscar, ajustes };
+    const cambioSeccion = vista !== vistaPintada;
+    const y = window.scrollY;
     app.classList.toggle('sin-anim', !animar); animar = false;
     app.innerHTML = (vistas[vista] || inicio)();
     renderNav();
     if (vista === 'inicio') { const ta = $('#entrada'); if (ta) ajustarAlto(ta); }
     if (vista === 'buscar') { const i = $('#q'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
-    window.scrollTo(0, 0);
+    // Solo sube al cambiar de sección; al tildar o anotar se queda donde estabas.
+    if (cambioSeccion) window.scrollTo(0, 0); else window.scrollTo(0, y);
+    vistaPintada = vista;
   }
   function renderNav() {
     const tabs = [['inicio', 'Inicio'], ['agenda', 'Agenda'], ['tareas', 'Tareas'], ['cuentas', 'Cuentas'], ['ideas', 'Ideas']];

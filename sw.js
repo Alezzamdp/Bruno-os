@@ -1,6 +1,6 @@
 // BRUNO OS · trabaja sin señal. Al cambiar VERSION se reemplaza todo lo guardado.
-const VERSION = 'brunoos-v6';
-const ARCHIVOS = ['./', './index.html', './app.css?v=6', './app.js?v=6', './manifest.json', './fonts/Archivo-Variable.ttf', './icon-192.png', './icon-512.png', './icon-180.png'];
+const VERSION = 'brunoos-v7';
+const ARCHIVOS = ['./', './index.html', './app.css?v=7', './app.js?v=7', './manifest.json', './fonts/Archivo-Variable.ttf', './icon-192.png', './icon-512.png', './icon-180.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
