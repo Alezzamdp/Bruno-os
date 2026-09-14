@@ -285,8 +285,8 @@
       '</header>' +
       '<section class="entrada aparece">' +
         '<div class="caja"><textarea id="entrada" rows="2" placeholder="Anotá lo que aparezca…" enterkeyhint="send"></textarea>' +
-        '<div class="acciones">' + (tieneVoz() ? '<button type="button" class="btn icono" id="voz" aria-label="Dictar">●</button>' : '') + '<button type="button" class="btn primario" id="interpretar">Anotar</button></div></div>' +
-        '<div class="ayuda">Una línea y la app propone si es <b>agenda</b>, <b>tarea</b>, <b>plata</b>, <b>idea</b> o <b>nota</b>. Ej.: <b>turno en el gestor el lunes a las 10</b> · <b>gasté 42 mil en cubiertas de la Suran</b> · <b>idea: reel sobre el olor del auto</b></div>' +
+        '<div class="acciones"><button type="button" class="btn primario" id="interpretar">Anotar</button></div></div>' +
+        '<div class="ayuda">Se guarda solo donde corresponde: <b>agenda</b> si tiene fecha u hora, <b>plata</b> si tiene monto, <b>idea:</b> o <b>nota:</b> por prefijo; si no, <b>tarea</b>. Para dictar, el micrófono del teclado.</div>' +
       '</section>' +
       '<section class="pulso aparece">' +
         '<div><div class="num n">' + evs.length + '</div><div class="rotulo">hoy</div></div>' +
@@ -306,6 +306,19 @@
       fab();
   }
   const fab = () => '<button type="button" class="fab" data-nuevo aria-label="Anotar">+</button>';
+  // Caja rápida de cada sección: lo que se escribe acá va derecho a ese tipo, sin confirmar.
+  function cajaRapida(tipo, placeholder) {
+    return '<form class="rapida aparece" data-rapida="' + tipo + '"><input type="text" name="texto" placeholder="' + placeholder + '" autocomplete="off" autocapitalize="sentences" enterkeyhint="send"><button type="submit" class="btn primario">Anotar</button></form>';
+  }
+  function cajaPlata() {
+    const cuentaIni = filtroCuenta || 'Personal';
+    return '<form class="rapida plata aparece" data-rapida="movimiento">' +
+      '<div class="fila-plata"><div class="monto-caja"><span class="peso">$</span><input type="text" name="monto" inputmode="decimal" placeholder="0" autocomplete="off"></div>' +
+      '<input type="text" name="texto" placeholder="Qué fue (ej. cubiertas Suran)" autocomplete="off" autocapitalize="sentences" enterkeyhint="send"></div>' +
+      '<div class="chips" style="margin-top:10px">' + [['-1', 'Gasto'], ['1', 'Ingreso']].map(([v, l], i) => '<label class="chip radio' + (i === 0 ? ' on' : '') + '"><input type="radio" name="signo" value="' + v + '"' + (i === 0 ? ' checked' : '') + '>' + l + '</label>').join('') +
+      '<span style="flex:1"></span>' + CUENTAS.map((c) => '<label class="chip radio' + (c === cuentaIni ? ' on' : '') + '"><input type="radio" name="cuenta" value="' + c + '"' + (c === cuentaIni ? ' checked' : '') + '>' + c + '</label>').join('') + '</div>' +
+      '<button type="submit" class="btn primario" style="width:100%;margin-top:10px;padding:14px">Anotar</button></form>';
+  }
   const cabSecc = (t, extra) => '<div class="cab-secc aparece"><h1>' + t + '</h1>' + (extra || '') + '</div>';
 
   // ----- Agenda -----
@@ -316,7 +329,7 @@
     const pasados = evs.filter((e) => e.fecha < h).reverse().slice(0, 15);
     const grupos = {}; futuros.forEach((e) => { (grupos[e.fecha] = grupos[e.fecha] || []).push(e); });
     const fechas = Object.keys(grupos).sort();
-    let html = cabSecc('Agenda', '<span class="rotulo">' + futuros.length + ' próximos</span>');
+    let html = cabSecc('Agenda', '<span class="rotulo">' + futuros.length + ' próximos</span>') + cajaRapida('evento', 'Qué y cuándo. Ej.: gestor el jueves a las 10');
     if (!fechas.length) html += '<div class="vacio aparece">Nada agendado. Escribí algo como <b>“turno en la verificadora el jueves a las 9”</b>.</div>';
     fechas.forEach((f) => {
       const d = deIso(f);
@@ -331,6 +344,7 @@
     const todas = items().filter((x) => x.tipo === 'tarea');
     const lista = filtroTareas === 'hechas' ? todas.filter((t) => t.estado === 'hecha').sort((a, b) => (b.hecho || '').localeCompare(a.hecho || '')) : prioridades();
     return cabSecc('Tareas', '<span class="rotulo">' + pendientes().length + ' pendientes</span>') +
+      cajaRapida('tarea', 'Qué hay que hacer. Ej.: llamar a Juan') +
       '<div class="chips aparece" style="margin:10px 0 16px">' + [['pendientes', 'Pendientes'], ['hechas', 'Hechas']].map(([k, l]) => '<button type="button" class="chip' + (filtroTareas === k ? ' on' : '') + '" data-filtro-tareas="' + k + '">' + l + '</button>').join('') + '</div>' +
       '<div class="lista aparece">' + (lista.length ? lista.map(filaTarea).join('') : '<div class="vacio">' + (filtroTareas === 'hechas' ? 'Todavía nada terminado.' : 'Sin pendientes. Anotá el próximo paso de algo.') + '</div>') + '</div>' + fab();
   }
@@ -343,7 +357,7 @@
     const delMes = movs.filter((m) => (m.fecha || '').startsWith(mes));
     const ing = delMes.filter((m) => m.monto > 0).reduce((a, m) => a + m.monto, 0);
     const gas = delMes.filter((m) => m.monto < 0).reduce((a, m) => a + m.monto, 0);
-    return cabSecc('Cuentas') +
+    return cabSecc('Cuentas') + cajaPlata() +
       '<div class="cuentas aparece">' + CUENTAS.map((c) => '<button type="button" class="cuenta" data-filtro-cuenta="' + c + '" style="' + (filtroCuenta === c ? 'outline:1px solid var(--mostaza);outline-offset:-1px' : '') + '"><div class="rotulo">' + c + '</div><div class="saldo' + (s[c] < 0 ? ' neg' : '') + '">' + plata(s[c]) + '</div></button>').join('') + '</div>' +
       '<div class="pulso aparece"><div><div class="num n" style="font-size:22px;color:var(--mostaza)">' + plata(ing) + '</div><div class="rotulo">entró este mes</div></div><div><div class="num n" style="font-size:22px;color:var(--blanco)">' + plata(gas) + '</div><div class="rotulo">salió este mes</div></div></div>' +
       '<section class="seccion aparece"><div class="seccion-cab"><h2>' + (filtroCuenta || 'Movimientos') + '</h2>' + (filtroCuenta ? '<button type="button" class="ver" data-filtro-cuenta="">Todas</button>' : '') + '</div><div class="lista">' +
@@ -353,7 +367,7 @@
   // ----- Ideas -----
   function ideas() {
     const lista = items().filter((x) => x.tipo === 'idea' || x.tipo === 'nota');
-    return cabSecc('Ideas', '<span class="rotulo">' + lista.length + '</span>') +
+    return cabSecc('Ideas', '<span class="rotulo">' + lista.length + '</span>') + cajaRapida('idea', 'Una idea, tal cual venga') +
       '<div class="lista aparece" style="margin-top:14px">' + (lista.length ? lista.map(filaIdea).join('') : '<div class="vacio">Nada todavía. Empezá con <b>“idea: …”</b> o <b>“nota: …”</b>.</div>') + '</div>' + fab();
   }
 
@@ -395,7 +409,7 @@
     let campos = '<div class="campo"><label>Título</label><input name="titulo" value="' + esc(p.titulo) + '" autocomplete="off"></div>';
     if (p.tipo === 'evento') campos += '<div class="campo"><div class="dos"><div><label>Fecha</label><input name="fecha" type="date" value="' + (p.fecha || hoy()) + '"></div><div><label>Hora</label><input name="hora" type="time" value="' + (p.hora || '') + '"></div></div></div><div class="campo"><label>Área</label>' + areaSel + '</div>';
     if (p.tipo === 'tarea') campos += '<div class="campo"><div class="dos"><div><label>Para cuándo (opcional)</label><input name="fecha" type="date" value="' + (p.fecha || '') + '"></div><div><label>Área</label>' + areaSel + '</div></div></div><div class="campo"><label class="chips" style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:15px;color:var(--blanco)"><input type="checkbox" name="prioridad" style="width:20px;height:20px;padding:0"' + (p.prioridad ? ' checked' : '') + '> Prioridad</label></div>';
-    if (p.tipo === 'movimiento') campos += '<div class="campo"><div class="chips">' + [['-1', 'Gasto'], ['1', 'Ingreso']].map(([v, l]) => '<button type="button" class="chip' + (String(p.signo || -1) === v ? ' on' : '') + '" data-signo="' + v + '">' + l + '</button>').join('') + '</div></div><div class="campo"><div class="dos"><div><label>Monto</label><input name="monto" type="number" inputmode="numeric" value="' + (Math.abs(p.monto || 0) || '') + '" placeholder="0"></div><div><label>Cuenta</label><select name="cuenta">' + CUENTAS.map((c) => '<option' + (p.cuenta === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></div></div></div><div class="campo"><label>Fecha</label><input name="fecha" type="date" value="' + (p.fecha || hoy()) + '"></div>';
+    if (p.tipo === 'movimiento') campos += '<div class="campo"><div class="chips">' + [['-1', 'Gasto'], ['1', 'Ingreso']].map(([v, l]) => '<button type="button" class="chip' + (String(p.signo || -1) === v ? ' on' : '') + '" data-signo="' + v + '">' + l + '</button>').join('') + '</div></div><div class="campo"><div class="dos"><div><label>Monto</label><input name="monto" type="text" inputmode="decimal" value="' + (Math.abs(p.monto || 0) || '') + '" placeholder="0"></div><div><label>Cuenta</label><select name="cuenta">' + CUENTAS.map((c) => '<option' + (p.cuenta === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></div></div></div><div class="campo"><label>Fecha</label><input name="fecha" type="date" value="' + (p.fecha || hoy()) + '"></div>';
     if (p.tipo === 'idea' || p.tipo === 'nota') campos += '<div class="campo"><label>Área</label>' + areaSel + '</div>';
     return campos;
   }
@@ -415,7 +429,7 @@
     if (fd.has('hora')) p.hora = fd.get('hora') || null;
     if (fd.has('area')) p.area = fd.get('area');
     if (fd.has('cuenta')) p.cuenta = fd.get('cuenta');
-    if (fd.has('monto')) { const n = Math.abs(parseFloat(fd.get('monto')) || 0); p.monto = (p.signo || -1) * n; }
+    if (fd.has('monto')) { const n = Math.abs(parseFloat(String(fd.get('monto')).replace(/\./g, '').replace(',', '.')) || 0); p.monto = (p.signo || -1) * n; }
     if (p.tipo === 'tarea') p.prioridad = fd.get('prioridad') === 'on'; else delete p.prioridad;
     if (p.tipo === 'evento' && !p.fecha) p.fecha = hoy();
     if (p.tipo === 'movimiento' && !p.fecha) p.fecha = hoy();
@@ -427,32 +441,34 @@
 
   // ---------- Aviso ----------
   let deshacerFn = null;
-  function aviso(texto, deshacer) {
+  function aviso(texto, deshacer, etiqueta) {
     clearTimeout(toastTimer);
     const viejo = $('.toast'); if (viejo) viejo.remove();
     deshacerFn = deshacer || null;
     const el = document.createElement('div');
     el.className = 'toast';
-    el.innerHTML = esc(texto) + (deshacer ? '<button type="button" class="deshacer" data-deshacer>Deshacer</button>' : '');
+    el.innerHTML = '<span>' + esc(texto) + '</span>' + (deshacer ? '<button type="button" class="deshacer" data-deshacer>' + (etiqueta || 'Deshacer') + '</button>' : '');
     document.body.appendChild(el);
-    toastTimer = setTimeout(() => el.remove(), deshacer ? 5000 : 2200);
+    toastTimer = setTimeout(() => el.remove(), deshacer ? 6000 : 2200);
+  }
+  // Anota directo, sin confirmar. Si viene de la caja de una sección, se acomoda a ese tipo.
+  function anotarDirecto(texto, tipoForzado) {
+    const p = interpretar(texto);
+    if (tipoForzado && p.tipo !== tipoForzado) {
+      if (tipoForzado === 'movimiento') { sheetConfirmar({ tipo: 'movimiento', titulo: p.titulo, monto: 0, cuenta: detectarCuenta(sinAcentos(texto.toLowerCase())), fecha: hoy() }, false); return null; }
+      const fecha = p.fecha || null; const hora = p.hora || null;
+      Object.keys(p).forEach((k) => { if (k !== 'titulo' && k !== 'area') delete p[k]; });
+      p.tipo = tipoForzado;
+      if (tipoForzado === 'evento') { p.fecha = fecha || hoy(); p.hora = hora; }
+      if (tipoForzado === 'tarea') p.fecha = fecha;
+    }
+    const it = agregar(p);
+    render();
+    const donde = it.tipo === 'evento' ? [relativo(it.fecha), it.hora].filter(Boolean).join(' ') : it.tipo === 'movimiento' ? plata(it.monto) + ' · ' + it.cuenta : (it.tipo === 'tarea' && it.fecha) ? relativo(it.fecha) : '';
+    aviso(TIPOS[it.tipo] + (donde ? ' · ' + donde : '') + ' · ' + it.titulo, () => sheetConfirmar(Object.assign({}, it), true), 'Cambiar');
+    return it;
   }
 
-  // ---------- Voz ----------
-  const Reconocedor = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const tieneVoz = () => !!Reconocedor;
-  let rec = null;
-  function dictar() {
-    const ta = $('#entrada'); const btn = $('#voz');
-    if (rec) { rec.stop(); return; }
-    rec = new Reconocedor(); rec.lang = 'es-AR'; rec.interimResults = true; rec.continuous = false;
-    btn.classList.add('escuchando');
-    let base = ta.value ? ta.value.trim() + ' ' : '';
-    rec.onresult = (ev) => { let t = ''; for (const r of ev.results) t += r[0].transcript; ta.value = base + t; ajustarAlto(ta); };
-    rec.onerror = () => aviso('No pude escuchar. Probá el micrófono del teclado.');
-    rec.onend = () => { rec = null; btn.classList.remove('escuchando'); };
-    try { rec.start(); } catch (e) { rec = null; btn.classList.remove('escuchando'); }
-  }
   function ajustarAlto(ta) { ta.style.height = 'auto'; ta.style.height = Math.max(96, ta.scrollHeight) + 'px'; }
 
   // ---------- Copia de seguridad ----------
@@ -480,12 +496,11 @@
 
   // ---------- Eventos (delegados) ----------
   document.addEventListener('click', (ev) => {
-    const t = ev.target.closest('[data-ir],[data-nuevo],[data-hecha],[data-abrir],[data-cuenta],[data-filtro-tareas],[data-filtro-cuenta],[data-tipo],[data-signo],[data-cerrar],[data-eliminar],[data-deshacer],[data-exportar],[data-borrar-todo],#interpretar,#voz');
+    const t = ev.target.closest('[data-ir],[data-nuevo],[data-hecha],[data-abrir],[data-cuenta],[data-filtro-tareas],[data-filtro-cuenta],[data-tipo],[data-signo],[data-cerrar],[data-eliminar],[data-deshacer],[data-exportar],[data-borrar-todo],#interpretar');
     if (!t) return;
-    if (t.matches('#interpretar')) { const ta = $('#entrada'); const v = ta.value.trim(); if (!v) { ta.focus(); return; } sheetConfirmar(interpretar(v), false); return; }
-    if (t.matches('#voz')) { dictar(); return; }
+    if (t.matches('#interpretar')) { const ta = $('#entrada'); const v = ta.value.trim(); if (!v) { ta.focus(); return; } ta.value = ''; anotarDirecto(v, null); return; }
     if (t.dataset.ir != null) { vista = t.dataset.ir; if (vista === 'buscar') busqueda = ''; animar = true; render(); return; }
-    if (t.dataset.nuevo != null) { sheetConfirmar({ tipo: 'tarea', titulo: '', area: 'Personal', fecha: null }, false); setTimeout(() => { const i = $('input[name=titulo]'); if (i) i.focus(); }, 60); return; }
+    if (t.dataset.nuevo != null) { const tipo = vista === 'agenda' ? 'evento' : vista === 'cuentas' ? 'movimiento' : vista === 'ideas' ? 'idea' : 'tarea'; sheetConfirmar({ tipo, titulo: '', area: 'Personal', fecha: tipo === 'evento' ? hoy() : null, monto: 0, cuenta: 'Personal' }, false); const i = $('input[name=titulo]'); if (i) i.focus(); return; }
     if (t.dataset.hecha) {
       ev.stopPropagation();
       const it = items().find((x) => x.id === t.dataset.hecha); if (!it) return;
@@ -507,12 +522,32 @@
       if (g) aviso('Eliminado', () => { restaurar(g); render(); });
       return;
     }
-    if (t.dataset.deshacer != null) { if (deshacerFn) deshacerFn(); deshacerFn = null; const el = $('.toast'); if (el) el.remove(); return; }
+    if (t.dataset.deshacer != null) { const fn = deshacerFn; deshacerFn = null; const el = $('.toast'); if (el) el.remove(); if (fn) fn(); return; }
     if (t.dataset.exportar != null) { exportar(); return; }
     if (t.dataset.borrarTodo != null) { if (confirm('¿Borrar todos los registros? No hay vuelta atrás.')) { datos = { version: 4, items: [] }; guardar(); vista = 'inicio'; render(); aviso('Todo borrado'); } return; }
   });
 
   document.addEventListener('submit', (ev) => {
+    if (ev.target.matches('[data-rapida]')) {
+      ev.preventDefault();
+      const f = ev.target; const tipo = f.dataset.rapida; const texto = (f.texto.value || '').trim();
+      if (tipo === 'movimiento') {
+        const n = Math.round(parseFloat((f.monto.value || '').replace(/\./g, '').replace(',', '.')) || 0);
+        if (!n) { f.monto.focus(); return; }
+        if (!texto) { f.texto.focus(); return; }
+        const signo = +((f.querySelector('[name=signo]:checked') || {}).value || -1);
+        const cuenta = (f.querySelector('[name=cuenta]:checked') || {}).value || 'Personal';
+        const it = agregar({ tipo: 'movimiento', titulo: cap(texto), monto: n * signo, cuenta, fecha: hoy() });
+        render();
+        aviso(plata(it.monto) + ' · ' + it.cuenta + ' · ' + it.titulo, () => sheetConfirmar(Object.assign({}, it), true), 'Cambiar');
+        const m = $('.rapida.plata [name=monto]'); if (m) m.focus();
+        return;
+      }
+      if (!texto) { f.texto.focus(); return; }
+      anotarDirecto(texto, tipo);
+      const i = $('.rapida [name=texto]'); if (i) i.focus();
+      return;
+    }
     if (!ev.target.matches('#form-item')) return;
     ev.preventDefault();
     const p = leerFormulario(ev.target);
@@ -530,7 +565,10 @@
     if (ev.target.matches('#entrada')) ajustarAlto(ev.target);
     if (ev.target.matches('#q')) { busqueda = ev.target.value; const lista = $('.lista'); if (lista) { const tmp = document.createElement('div'); tmp.innerHTML = buscar(); lista.replaceWith(tmp.querySelector('.lista')); } }
   });
-  document.addEventListener('change', (ev) => { if (ev.target.matches('#importar') && ev.target.files[0]) importar(ev.target.files[0]); });
+  document.addEventListener('change', (ev) => {
+    if (ev.target.matches('#importar') && ev.target.files[0]) importar(ev.target.files[0]);
+    if (ev.target.matches('.chip.radio input')) ev.target.closest('form').querySelectorAll('input[name="' + ev.target.name + '"]').forEach((r) => r.closest('.chip').classList.toggle('on', r.checked));
+  });
   document.addEventListener('keydown', (ev) => {
     if (ev.target.matches('#entrada') && ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); $('#interpretar').click(); }
     if (ev.key === 'Escape') cerrarSheet();
@@ -539,6 +577,13 @@
   // ---------- Arranque ----------
   cargar();
   render();
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Sin señal sigue andando. Cuando hay versión nueva, la app se recarga sola una vez.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch(() => {});
+    let teniaControl = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (teniaControl) location.reload(); teniaControl = true; });
+  }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && vista === 'inicio') { animar = true; render(); } });
 })();

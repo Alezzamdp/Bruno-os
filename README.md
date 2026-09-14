@@ -1,6 +1,6 @@
 # BRUNO OS
 
-Un solo lugar para anotar. Escribís (o dictás) una línea; la app propone si es **agenda**, **tarea**, **plata**, **idea** o **nota**; confirmás; después lo encontrás con **Buscar**.
+Un solo lugar para anotar. Escribís (o dictás con el micrófono del teclado) una línea y se guarda sola donde corresponde: **agenda**, **tarea**, **plata**, **idea** o **nota**. Un aviso muestra dónde fue, con **Cambiar** por si se equivocó. Cada sección tiene su propia caja rápida (en Cuentas, con teclado numérico). Después lo encontrás con **Buscar**.
 
 Vive en el teléfono: https://alezzamdp.github.io/Bruno-os/ agregada a la pantalla de inicio.
 

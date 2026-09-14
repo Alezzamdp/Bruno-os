@@ -266,3 +266,19 @@ h2 {
 .ajuste .texto .small { margin-top: 3px; }
 .cab-secc { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 4px; }
 .cab-secc h1 { font-size: 34px; }
+
+/* ---------- Caja rápida por sección ---------- */
+.rapida { display: flex; gap: 8px; margin: 14px 0 6px; }
+.rapida input[name=texto] { flex: 1; font-size: 16px; padding: 13px 14px; }
+.rapida > .btn { flex: 0 0 auto; }
+.rapida.plata { display: block; padding: 14px; border: 1px solid var(--linea); border-radius: var(--radio); background: var(--negro-2); }
+.rapida.plata .fila-plata { display: grid; grid-template-columns: 150px 1fr; gap: 8px; }
+.rapida.plata input { background: var(--negro); }
+.monto-caja { position: relative; }
+.monto-caja .peso { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--mostaza); font-weight: 800; font-size: 18px; }
+.monto-caja input { padding-left: 30px; font-weight: 800; font-stretch: 106%; font-size: 22px; font-variant-numeric: tabular-nums; }
+.chip.radio { display: inline-flex; align-items: center; cursor: pointer; }
+.chip.radio input { position: absolute; opacity: 0; width: 0; height: 0; }
+.toast { display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); white-space: normal; }
+.toast > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast .deshacer { margin-left: 0; flex: 0 0 auto; }
