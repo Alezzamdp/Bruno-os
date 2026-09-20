@@ -1,4 +1,4 @@
-/* BRUNO OS · v8
+/* BRUNO OS · v10
    Un solo lugar para anotar: la app entiende qué es (agenda, tarea, idea, nota) y lo guarda.
    Todo vive en este teléfono (localStorage). Sin servidor, sin dependencias, sin nube. */
 (function () {
@@ -80,10 +80,16 @@
       return { tipo: 'nota', titulo: cap(raw.slice(m[0].length).trim()), area: detectarArea(low) };
     }
 
-    // Fecha
-    let fecha = null;
     let restoTitulo = raw;
     const quitar = (re) => { restoTitulo = restoTitulo.replace(re, ' '); };
+
+    // La palabra manda: "agenda" en cualquier lado lo lleva a la agenda; "tarea" o "pendiente", a tareas.
+    let forzado = null;
+    if (/\b(agenda|agendar|agendame|agendalo|agendala)\b/.test(low)) { forzado = 'evento'; quitar(/\b(agenda|agendar|agendame|agendalo|agendala|agendá)\b:?/i); }
+    else if (/\b(tarea|pendiente)\b/.test(low)) { forzado = 'tarea'; quitar(/\b(tarea|pendiente)\b:?/i); }
+
+    // Fecha
+    let fecha = null;
     if (/\bpasado manana\b/.test(low)) { fecha = addDias(h, 2); quitar(/pasado mañana/i); }
     else if (/\bmanana\b/.test(low)) { fecha = addDias(h, 1); quitar(/\bmañana\b/i); }
     else if (/\bhoy\b/.test(low)) { fecha = h; quitar(/\bhoy\b/i); }
@@ -100,8 +106,14 @@
         fecha = iso(d); quitar(new RegExp('(\\bel\\s+)?' + m[1] + '\\s+de\\s+' + MESES[mi], 'i'));
       }
     }
+    const diasSin = DIAS.map(sinAcentos);
+    const diaRe = (i) => diasSin[i].replace(/[aeio]/g, (v) => '[' + v + ({ a: 'á', e: 'é', i: 'í', o: 'ó' })[v] + ']'); // acepta "sábado" y "sabado"
+    // "lunes 21": el número es el día del mes; el nombre del día solo acompaña.
+    if (!fecha && (m = low.match(new RegExp('\\b(?:el\\s+)?(' + diasSin.join('|') + ')\\s+(\\d{1,2})\\b(?!\\s*(:|hs|h\\b|horas))')))) {
+      const d = deIso(h); d.setDate(+m[2]); if (iso(d) < h) d.setMonth(d.getMonth() + 1);
+      fecha = iso(d); quitar(new RegExp('(\\bel\\s+)?' + diaRe(diasSin.indexOf(m[1])) + '\\s+' + m[2] + '\\b', 'i'));
+    }
     if (!fecha) {
-      const diasSin = DIAS.map(sinAcentos);
       for (let i = 0; i < 7; i++) {
         const re = new RegExp('\\b(el\\s+)?' + diasSin[i] + '(\\s+que\\s+viene|\\s+proximo)?\\b');
         const mm = low.match(re);
@@ -110,7 +122,7 @@
           if (diff === 0) diff = 7;
           if (mm[2]) diff += diff < 7 ? 7 : 0;
           fecha = addDias(h, diff);
-          quitar(new RegExp('(\\bel\\s+)?' + DIAS[i] + '(\\s+que\\s+viene|\\s+pr[oó]ximo)?', 'i'));
+          quitar(new RegExp('(\\bel\\s+)?' + diaRe(i) + '(\\s+que\\s+viene|\\s+pr[oó]ximo)?', 'i'));
           break;
         }
       }
@@ -132,10 +144,14 @@
       }
     }
 
-    const esEvento = !!hora || /\b(turno|reunion|cita|junta|entrega|entrego|viaje|vuelo|cumple|cumpleanos|visita|voy a ver|ver el auto|ver la|muestro|mostrar el)\b/.test(low);
+    // Qué es: hora o palabra de compromiso → agenda. Fecha sola → agenda, salvo que empiece con un verbo de tarea
+    // ("pagar la VTV el jueves" es una tarea con fecha; "gestor el jueves" es un compromiso).
+    const esEvento = !!hora || /\b(turno|reunion|cita|junta|entrega|entrego|viaje|vuelo|cumple|cumpleanos|visita|voy a ver|ver el auto|ver la|muestro|mostrar el|viene a ver|vienen a ver)\b/.test(low);
+    const verboTarea = /^(llamar|comprar|pagar|hacer|mandar|pasar|buscar|llevar|traer|revisar|cargar|subir|publicar|terminar|arreglar|pedir|avisar|escribir|enviar|cobrar|preparar|lavar|limpiar|sacar|renovar|imprimir|firmar|responder|contestar|armar|editar|grabar|filmar|ordenar|organizar|vender|cambiar|chequear|controlar|consultar|preguntar|reservar|retirar|averiguar|anotar|leer|estudiar|practicar|entrenar|pensar|definir|decidir|resolver|conseguir|comprarle|pagarle|mandarle|avisarle|pedirle|llamarlo|llamarla)\b/.test(low);
+    const tipo = forzado || ((esEvento || (fecha && !verboTarea)) ? 'evento' : 'tarea');
     titulo = cap(restoTitulo.replace(/\s{2,}/g, ' ').replace(/^\s*(el|la|a)\s+/i, '').replace(/(\s+(el|la|los|las|a|en|de|del|para|por|antes|hasta))+\s*$/i, '').trim()) || raw;
 
-    if (esEvento) return { tipo: 'evento', titulo, fecha: fecha || h, hora, area: detectarArea(low) };
+    if (tipo === 'evento') return { tipo, titulo, fecha: fecha || h, hora, area: detectarArea(low) };
     return { tipo: 'tarea', titulo, fecha, area: detectarArea(low) };
   }
   function detectarArea(low) {
@@ -276,7 +292,7 @@
       '<div class="ajuste"><div>Copia de seguridad<div class="meta">' + n + ' registros. Guardala en Archivos o Drive cada tanto.</div></div><button type="button" class="btn" data-exportar>Guardar</button></div>' +
       '<div class="ajuste"><div>Restaurar copia<div class="meta">Reemplaza todo por el archivo que elijas.</div></div><label class="btn" for="importar">Elegir</label><input id="importar" type="file" accept="application/json,.json" hidden></div>' +
       '<div class="ajuste"><div>Borrar todo<div class="meta">Sin vuelta atrás.</div></div><button type="button" class="btn rojo" data-borrar-todo>Borrar</button></div>' +
-      '<div class="ajuste"><div class="meta">BRUNO OS v8 · datos en este teléfono · sin servidor</div></div>' +
+      '<div class="ajuste"><div class="meta">BRUNO OS v10 · datos en este teléfono · sin servidor</div></div>' +
       '</div>';
   }
 

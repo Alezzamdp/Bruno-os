@@ -1,6 +1,6 @@
 # BRUNO OS
 
-Un solo lugar para anotar. Escribís (o dictás con el micrófono del teclado) una línea y se guarda sola donde corresponde: **agenda** si tiene fecha u hora, **idea** o **nota** por prefijo (`idea: …`, `nota: …`); si no, **tarea**. Un aviso muestra dónde fue, con **Cambiar** por si se equivocó.
+Un solo lugar para anotar. Escribís (o dictás con el micrófono del teclado) una línea y se guarda sola donde corresponde: **agenda** si tiene hora, fecha (`lunes 21`, `el 21`, `21/9`) o la palabra `agenda`; **tarea** si empieza con un verbo de tarea (`pagar`, `llamar`, `comprar`…) o dice `tarea`, **idea** o **nota** por prefijo (`idea: …`, `nota: …`); si no, **tarea**. Un aviso muestra dónde fue, con **Cambiar** por si se equivocó.
 
 Vive en el teléfono: https://alezzamdp.github.io/Bruno-os/ agregada a la pantalla de inicio.
 
@@ -20,6 +20,9 @@ Ejemplos que entiende: `turno en el gestor el lunes a las 10` · `entrego la Sur
 Todo se guarda en el navegador del teléfono (`localStorage`, clave `brunoos.v4`). No hay servidor ni nube. Si se pierde el teléfono se pierden los datos: **hacer la copia de seguridad cada tanto** (Ajustes → Guardar) y dejarla en Archivos o Drive. Los movimientos de plata de versiones anteriores siguen en los datos y en la copia, pero ya no se muestran.
 
 ## Técnico
+
+Sigue el modo claro u oscuro del teléfono (`prefers-color-scheme`), sin ajuste propio. `node test-interpretar.js` chequea que las frases de ejemplo caigan donde corresponde.
+
 
 HTML + CSS + JS sin dependencias ni compilación (`index.html`, `app.css`, `app.js`). Tipografía del sistema. `sw.js` la deja funcionar sin señal; al cambiar de versión, subir el número en `sw.js` (`VERSION`) y en `index.html` (`?v=`).
 

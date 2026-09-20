@@ -8,6 +8,7 @@
   --mostaza: #d4af37;
   --mostaza-texto: #8a6d1f;
   --rojo: #ff3b30;
+  --nav-bg: rgba(255,255,255,.88);
   --m: 20px;
   --nav-h: 50px;
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -15,7 +16,23 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { background: var(--fondo); color-scheme: light; }
+/* Sigue el modo del teléfono: claro u oscuro, sin ajuste propio. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #000000;
+    --texto: #ffffff;
+    --gris: #8e8e93;
+    --gris-2: #48484a;
+    --linea: #2c2c2e;
+    --relleno: #1c1c1e;
+    --mostaza-texto: #d4af37;
+    --rojo: #ff453a;
+    --nav-bg: rgba(0,0,0,.88);
+  }
+  .toast { box-shadow: 0 8px 30px rgba(255,255,255,.12); }
+}
+
+html { background: var(--fondo); color-scheme: light dark; }
 body {
   font-family: -apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--fondo);
@@ -95,7 +112,7 @@ h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; letter-spacing: -.01
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   height: calc(var(--nav-h) + var(--safe-b)); padding-bottom: var(--safe-b);
-  background: rgba(255,255,255,.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  background: var(--nav-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--linea);
   display: grid; grid-template-columns: repeat(3, 1fr);
 }
