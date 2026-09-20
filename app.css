@@ -81,8 +81,7 @@ h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; letter-spacing: -.01
 .fila .meta { font-size: 13px; color: var(--gris); margin-top: 2px; }
 .fila .meta.roja { color: var(--rojo); }
 .fila.hecha .titulo { color: var(--gris); text-decoration: line-through; }
-.fila .cuando { font-size: 15px; font-variant-numeric: tabular-nums; min-width: 44px; padding-top: 2px; color: var(--mostaza-texto); font-weight: 600; }
-.fila .cuando.gris { color: var(--gris-2); }
+.fila .meta.cuando { color: var(--mostaza-texto); font-weight: 600; font-size: 14px; }
 .check {
   width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; border: 1.5px solid var(--gris-2);
   display: grid; place-items: center; transition: transform .15s cubic-bezier(.34,1.56,.64,1), background .15s, border-color .15s;

@@ -196,10 +196,13 @@
       '<button type="button" class="check' + (t.estado === 'hecha' ? ' on' : '') + '" data-hecha="' + t.id + '" aria-label="Completar">' + (t.estado === 'hecha' ? svgCheck : '') + '</button>' +
       '<div><div class="titulo">' + esc(t.titulo) + '</div>' + (meta ? '<div class="meta' + (vencida ? ' roja' : '') + '">' + meta + '</div>' : '') + '</div></div>';
   }
+  // Misma fila que una tarea: tilde para marcarla hecha; el cuándo va en la línea de abajo.
   function filaEvento(e, conFecha) {
-    return '<div class="fila" data-abrir="' + e.id + '">' +
-      '<div class="cuando' + (e.hora ? '' : ' gris') + '">' + (e.hora || '—') + '</div>' +
-      '<div><div class="titulo">' + esc(e.titulo) + '</div>' + (conFecha ? '<div class="meta">' + relativo(e.fecha) + '</div>' : '') + '</div></div>';
+    const hecha = e.estado === 'hecha';
+    const meta = [conFecha ? cap(relativo(e.fecha)) : '', e.hora].filter(Boolean).join(' · ');
+    return '<div class="fila' + (hecha ? ' hecha' : '') + '" data-abrir="' + e.id + '">' +
+      '<button type="button" class="check' + (hecha ? ' on' : '') + '" data-hecha="' + e.id + '" aria-label="Completar">' + (hecha ? svgCheck : '') + '</button>' +
+      '<div><div class="titulo">' + esc(e.titulo) + '</div>' + (meta ? '<div class="meta cuando">' + meta + '</div>' : '') + '</div></div>';
   }
   function filaIdea(x) {
     return '<div class="fila sola" data-abrir="' + x.id + '">' +
@@ -215,14 +218,13 @@
   // ----- Inicio: todo lo del día a mano, sin bajar -----
   function inicio() {
     const h = hoy();
-    const evs = eventosDe(h);
+    // Lo de hoy y lo de los próximos 7 días, en la misma lista.
+    const evs = []; for (let i = 0; i <= 7; i++) evs.push(...eventosDe(addDias(h, i)));
     const tareas = verHechas ? hechas().slice(0, 30) : prioridades();
-    let proximo = '';
-    for (let i = 1; i <= 7 && !proximo; i++) { const e = eventosDe(addDias(h, i))[0]; if (e) proximo = esc(e.titulo) + ' · ' + relativo(e.fecha) + (e.hora ? ' ' + e.hora : ''); }
     return cabecera('Hoy', cap(diaLargo(h)), '<span class="acciones"><button type="button" data-ir="buscar">Buscar</button><button type="button" data-ir="ajustes">Ajustes</button></span>') +
       caja('', 'Anotar…') +
       '<div class="chips">' + ['evento', 'tarea', 'idea'].map((k) => '<button type="button" class="chip' + (tipoElegido === k ? ' on' : '') + '" data-elegir="' + k + '">' + TIPOS[k] + '</button>').join('') + '</div>' +
-      (evs.length ? seccion('Agenda', evs.map((e) => filaEvento(e, false)).join('')) : (proximo ? '<div class="vacio">Nada hoy. Lo próximo: ' + proximo + '.</div>' : '')) +
+      seccion('Agenda', evs.length ? evs.map((e) => filaEvento(e, true)).join('') : '<div class="vacio">Nada agendado esta semana.</div>') +
       seccion(verHechas ? 'Hechas' : 'Pendientes',
         (tareas.length ? tareas.map(filaTarea).join('') : '<div class="vacio">' + (verHechas ? 'Nada terminado todavía.' : 'Nada pendiente.') + '</div>') +
         '<button type="button" class="ver" data-hechas>' + (verHechas ? 'Ver pendientes' : 'Ver hechas') + '</button>');
@@ -232,7 +234,7 @@
   function agenda() {
     const h = hoy();
     const evs = items().filter((x) => x.tipo === 'evento').sort((a, b) => (a.fecha + (a.hora || '99')).localeCompare(b.fecha + (b.hora || '99')));
-    const futuros = evs.filter((e) => e.fecha >= h);
+    const futuros = evs.filter((e) => e.fecha >= h && e.estado !== 'hecha');
     const pasados = evs.filter((e) => e.fecha < h).reverse().slice(0, 15);
     const grupos = {}; futuros.forEach((e) => { (grupos[e.fecha] = grupos[e.fecha] || []).push(e); });
     const fechas = Object.keys(grupos).sort();
